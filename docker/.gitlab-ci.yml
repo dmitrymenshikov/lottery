@@ -1,0 +1,97 @@
+stages:
+  - config
+  - linter
+  - backend-tests
+  - swagger
+
+.php-common:
+  tags:
+    - shell
+    - php7.4
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}-php-v1
+    paths:
+      - backend/vendor/
+  before_script:
+    - cd ./backend
+    - /usr/local/bin/composer install --no-scripts
+
+.config-lint:
+  stage: config
+  extends: .php-common
+  except:
+    - master
+    - dev
+
+.php-lint:
+  stage: linter
+  extends: .php-common
+  except:
+    - master
+    - dev
+
+.php-tests:
+  stage: backend-tests
+  extends: .php-common
+
+check-configs:
+  extends: .config-lint
+  script:
+    - bin/console lint:yaml config
+
+php-lint:
+  extends: .php-lint
+  script:
+    - vendor/bin/phplint ./src ./tests --no-cache --no-progress
+
+php-copy-past-detector:
+  extends: .php-lint
+  script:
+    - vendor/bin/phpcpd --exclude Data --min-lines=300 src
+
+php-mess-detector:
+  extends: .php-lint
+  script:
+    - vendor/bin/phpmd src text .phpmd.xml --exclude Data --suffixes php
+
+php-code-style:
+  extends: .php-lint
+  script:
+    - vendor/bin/phpcs -n -s --no-cache --report-summary --report-width=300
+
+twig-lint:
+  extends: .php-lint
+  script:
+    - bin/console lint:twig templates --show-deprecations
+
+php-unit-test:
+  extends: .php-tests
+  script:
+    - bin/phpunit --coverage-text --colors=never --testsuite unit
+
+.yarn-common:
+  tags:
+    - shell
+    - php7.4
+  before_script:
+    - export PATH="/opt/node/bin:$PATH"
+    - npm i
+
+.yarn-linter:
+  stage: linter
+  extends: .yarn-common
+  except:
+    - master
+    - dev
+
+yarn-lint:
+  extends: .yarn-linter
+  script:
+    - yarn --cwd=frontend
+    - yarn --cwd=frontend lint
+
+swagger:
+  stage: swagger
+  extends: .php-common
+  script:
+    - vendor/bin/openapi ./swagger -o /dev/null 2>&1

@@ -1,0 +1,103 @@
+version: '3.2'
+services:
+
+    lottery-api-php:
+        container_name: lottery-php
+        build:
+            context: ./docker/php
+        depends_on:
+            - mariadb
+#            - lottery-rabbitmq
+        volumes:
+            - ./docker/php/php.ini:/usr/local/etc/php/php.ini
+            - ../:/var/www:rw,delegated
+            - /var/www/docker/runtime
+        dns:
+            - 1.1.1.1
+        ulimits:
+            nproc: 65535
+            nofile:
+                soft: 1048576
+                hard: 1048576
+
+    lottery-api-nginx:
+        container_name: lottery-api-nginx
+        build:
+            context: ./docker/nginx
+        ports:
+            - 8070:80
+        depends_on:
+            - lottery-api-php
+        dns:
+            - 1.1.1.1
+        volumes:
+            - ./docker/logs:/var/log/nginx
+            - ../:/var/www:rw,delegated
+
+    mariadb:
+        container_name: lottery-maria
+        image: mariadb:latest
+        restart: always
+        ports:
+            - 3306:3306
+        environment:
+            MYSQL_ROOT_PASSWORD: root
+            MYSQL_DATABASE: lottery
+            MYSQL_USER: lottery
+            MYSQL_PASSWORD: lottery
+        volumes:
+            - ./runtime/mariadb/data:/var/lib/mysql:rw,delegated
+            - ./runtime/mariadb/logs:/var/lib/mysql/logs:rw,delegated
+
+#    lottery-api-rabbitmq:
+#        container_name: lottery-rabbit
+#        image: rabbitmq:3-management-alpine
+#        environment:
+#            RABBITMQ_DEFAULT_USER: rabbit
+#            RABBITMQ_DEFAULT_PASS: rabbit
+#            RABBITMQ_DEFAULT_VHOST: rabbit
+#        ports:
+#            - 8072:15672
+#            - 5672:5672
+#        volumes:
+#            - ./docker/rabbitmq/enabled_plugins:/etc/rabbitmq/enabled_plugins
+
+#    elasticsearch:
+#        container_name: lottery-elastic
+#        image: elasticsearch:7.14.1
+#        container_name: elasticsearch
+#        environment:
+#            - xpack.security.enabled=false
+#            - discovery.type=single-node
+#        ulimits:
+#            memlock:
+#                soft: -1
+#                hard: -1
+#            nofile:
+#                soft: 65536
+#                hard: 65536
+#        cap_add:
+#            - IPC_LOCK
+#        volumes:
+#            - elasticsearch-data:/usr/share/elasticsearch/data
+#        ports:
+#            - 9200:9200
+#            - 9300:9300
+
+#    mailhog:
+#        container_name: lottery-mailhog
+#        image: mailhog/mailhog
+#        container_name: mailhog
+#        ports:
+#            - "1025:1025"
+#            - "8025:8025"
+
+    memcached:
+        container_name: lottery-memcached
+        image: memcached:1.6.10-alpine
+        ports:
+            - '11211:11211'
+
+#volumes:
+#    elasticsearch-data:
+#        driver: local
