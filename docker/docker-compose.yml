@@ -1,13 +1,14 @@
+name: 'lottery'
 version: '3.2'
 services:
 
-    lottery-api-php:
+    php:
         container_name: lottery-php
         build:
             context: ./docker/php
         depends_on:
             - mariadb
-#            - lottery-rabbitmq
+#            - rabbitmq
         volumes:
             - ./docker/php/php.ini:/usr/local/etc/php/php.ini
             - ../:/var/www:rw,delegated
@@ -20,14 +21,14 @@ services:
                 soft: 1048576
                 hard: 1048576
 
-    lottery-api-nginx:
-        container_name: lottery-api-nginx
+    nginx:
+        container_name: lottery-nginx
         build:
             context: ./docker/nginx
         ports:
-            - 8070:80
+            - 8060:80
         depends_on:
-            - lottery-api-php
+            - php
         dns:
             - 1.1.1.1
         volumes:
@@ -35,11 +36,11 @@ services:
             - ../:/var/www:rw,delegated
 
     mariadb:
-        container_name: lottery-maria
+        container_name: lottery-mariadb
         image: mariadb:latest
         restart: always
         ports:
-            - 3306:3306
+            - 3307:3306
         environment:
             MYSQL_ROOT_PASSWORD: root
             MYSQL_DATABASE: lottery
@@ -92,11 +93,11 @@ services:
 #            - "1025:1025"
 #            - "8025:8025"
 
-    memcached:
-        container_name: lottery-memcached
-        image: memcached:1.6.10-alpine
-        ports:
-            - '11211:11211'
+#    memcached:
+#        container_name: lottery-memcached
+#        image: memcached:1.6.10-alpine
+#        ports:
+#            - '11211:11211'
 
 #volumes:
 #    elasticsearch-data:
